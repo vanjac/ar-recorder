@@ -13,13 +13,14 @@ planes = { }
 
 plane_rotate = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
 
+start_time = None
 point_cloud_mesh = bpy.data.meshes.new("cloud")
 point_cloud_obj = bpy.data.objects.new("PointCloud", point_cloud_mesh)
 scene.collection.objects.link(point_cloud_obj)
 point_cloud_mesh = point_cloud_obj.data
 point_cloud_bmesh = bmesh.new()
 
-with open(bpy.path.abspath("//recording"), 'r') as file:
+with open(bpy.path.abspath("//recording.txt"), 'r') as file:
     print("Importing recording...")
     while True:
         line = file.readline()
@@ -31,7 +32,10 @@ with open(bpy.path.abspath("//recording"), 'r') as file:
             continue
         if words[0] == 't':
             time = float(words[1])
-            frame = int(time * fps)
+            if start_time is None:
+                start_time = time
+            time -= start_time
+            frame = int(round(time * fps))
             #print("Frame", frame)
             scene.frame_current = frame
         if words[0] == 'c':
