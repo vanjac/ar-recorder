@@ -73,3 +73,4 @@ crashlytics-build.properties
 recordings/
 arcore-unity-extensions-1.14.0/
 .vscode/
+build_ios/
