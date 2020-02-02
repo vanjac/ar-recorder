@@ -11,6 +11,7 @@ public class ARRecord : MonoBehaviour
     public static ARRecord instance;
 
     public Text timeText, filenameText;
+    public Text startStopText;
     private float startTime;
     private StreamWriter file;
     private bool updatePointClouds;
@@ -37,11 +38,23 @@ public class ARRecord : MonoBehaviour
         planeManager.planesChanged -= PlaneChanged;
     }
 
-    public void StartRecording()
+    public void StartStopButton()
     {
         if (file != null)
+        {
             StopRecording();
-        string fileName = DateTime.Now.Ticks.ToString();
+            startStopText.text = "START";
+        }
+        else
+        {
+            StartRecording();
+            startStopText.text = "STOP";
+        }
+    }
+
+    private void StartRecording()
+    {
+        string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
         filenameText.text = fileName;
         file = new StreamWriter(Application.persistentDataPath + "/" + fileName);
 
@@ -56,7 +69,7 @@ public class ARRecord : MonoBehaviour
         startTime = 0;
     }
 
-    public void StopRecording()
+    private void StopRecording()
     {
         if (file == null)
             return;
