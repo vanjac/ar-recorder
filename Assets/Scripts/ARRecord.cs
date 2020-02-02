@@ -10,6 +10,7 @@ public class ARRecord : MonoBehaviour
 {
     public static ARRecord instance;
 
+    public GameObject uiCanvas;
     public Text timeText, filenameText;
     public Text startStopText;
 
@@ -20,6 +21,7 @@ public class ARRecord : MonoBehaviour
     public bool recordCamera { get; set; } = true;
     public bool recordPointCloud { get; set; } = true;
     public bool recordPlanes { get; set; } = true;
+    public bool hideWhileRecording { get; set; } = false;
 
     private float startTime;
     private StreamWriter file;
@@ -45,19 +47,15 @@ public class ARRecord : MonoBehaviour
     public void StartStopButton()
     {
         if (file != null)
-        {
             StopRecording();
-            startStopText.text = "START";
-        }
         else
-        {
             StartRecording();
-            startStopText.text = "STOP";
-        }
     }
 
     private void StartRecording()
     {
+        startStopText.text = "STOP";
+
         string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".txt";
         filenameText.text = fileName;
         file = new StreamWriter(Application.persistentDataPath + "/" + fileName);
@@ -70,15 +68,29 @@ public class ARRecord : MonoBehaviour
         Camera cam = arCam.GetComponent<Camera>();
         file.WriteLine($"m {cam.fieldOfView} {Screen.width} {Screen.height}");
 
+        if (hideWhileRecording)
+        {
+            uiCanvas.SetActive(false);
+            cam.cullingMask = 0;
+        }
+
         startTime = 0;
     }
 
     private void StopRecording()
     {
+        startStopText.text = "START";
+
         if (file == null)
             return;
         file.Close();
         file = null;
+
+        if (hideWhileRecording)
+        {
+            uiCanvas.SetActive(true);
+            arCam.GetComponent<Camera>().cullingMask = ~0;
+        }
     }
 
     public void PointCloudChanged()
@@ -108,6 +120,13 @@ public class ARRecord : MonoBehaviour
             startTime = Time.time;
             return;
         }
+
+        if (hideWhileRecording && Input.GetMouseButtonDown(0))
+        {
+            StopRecording();
+            return;
+        }
+
         string t = (Time.time - startTime).ToString();
         timeText.text = "Time: " + t;
         file.WriteLine($"t {t}");

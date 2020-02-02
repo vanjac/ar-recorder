@@ -1045,7 +1045,18 @@ MonoBehaviour:
   m_Group: {fileID: 0}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1624342668}
+        m_MethodName: set_hideWhileRecording
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   m_IsOn: 0
 --- !u!1 &835450898
 GameObject:
@@ -2316,6 +2327,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ba19a50e74990a479c4cb00ef91f5f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  uiCanvas: {fileID: 2048867229}
   timeText: {fileID: 1587435600}
   filenameText: {fileID: 885515209}
   startStopText: {fileID: 585011665}
