@@ -12,16 +12,20 @@ public class ARRecord : MonoBehaviour
 
     public Text timeText, filenameText;
     public Text startStopText;
-    private float startTime;
-    private StreamWriter file;
-    private bool updatePointClouds;
-
-    private List<ARPlane> planesUpdated = new List<ARPlane>();
-    private List<ARPlane> planesRemoved = new List<ARPlane>();
 
     public GameObject arOrigin;
     public Transform arCam;
     public ARPlaneManager planeManager;
+
+    public bool recordCamera { get; set; } = true;
+    public bool recordPointCloud { get; set; } = true;
+    public bool recordPlanes { get; set; } = true;
+
+    private float startTime;
+    private StreamWriter file;
+    private bool updatePointClouds;
+    private List<ARPlane> planesUpdated = new List<ARPlane>();
+    private List<ARPlane> planesRemoved = new List<ARPlane>();
 
     void Awake()
     {
@@ -54,7 +58,7 @@ public class ARRecord : MonoBehaviour
 
     private void StartRecording()
     {
-        string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff");
+        string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".txt";
         filenameText.text = fileName;
         file = new StreamWriter(Application.persistentDataPath + "/" + fileName);
 
@@ -84,7 +88,7 @@ public class ARRecord : MonoBehaviour
 
     public void PlaneChanged(ARPlanesChangedEventArgs args)
     {
-        if (file != null)
+        if (file != null && recordPlanes)
         {
             planesUpdated.AddRange(args.added);
             planesUpdated.AddRange(args.updated);
@@ -105,14 +109,17 @@ public class ARRecord : MonoBehaviour
             return;
         }
         string t = (Time.time - startTime).ToString();
-        timeText.text = t;
+        timeText.text = "Time: " + t;
         file.WriteLine($"t {t}");
 
-        Vector3 camPos = arCam.position;
-        Quaternion camRot = arCam.rotation;
-        file.WriteLine($"c {camPos.x} {camPos.y} {camPos.z} {camRot.x} {camRot.y} {camRot.z} {camRot.w}");
+        if (recordCamera)
+        {
+            Vector3 camPos = arCam.position;
+            Quaternion camRot = arCam.rotation;
+            file.WriteLine($"c {camPos.x} {camPos.y} {camPos.z} {camRot.x} {camRot.y} {camRot.z} {camRot.w}");
+        }
 
-        if (updatePointClouds)
+        if (recordPointCloud && updatePointClouds)
         {
             foreach (ARPointCloud pointCloud in arOrigin.GetComponentsInChildren<ARPointCloud>())
             {
@@ -127,24 +134,28 @@ public class ARRecord : MonoBehaviour
             }
             updatePointClouds = false;
         }
-        foreach (ARPlane plane in planesUpdated)
+
+        if (recordPlanes)
         {
-            if (plane.subsumedBy != null)
-                continue;
-            Vector3 pos = plane.transform.position;
-            Quaternion rot = plane.transform.rotation;
-            var id = plane.trackableId;
-            file.WriteLine($"p {id} {pos.x} {pos.y} {pos.z} {rot.x} {rot.y} {rot.z} {rot.w}");
-            foreach (Vector2 point in plane.boundary)
+            foreach (ARPlane plane in planesUpdated)
             {
-                file.WriteLine($"b {point.x} {point.y}");
+                if (plane.subsumedBy != null)
+                    continue;
+                Vector3 pos = plane.transform.position;
+                Quaternion rot = plane.transform.rotation;
+                var id = plane.trackableId;
+                file.WriteLine($"p {id} {pos.x} {pos.y} {pos.z} {rot.x} {rot.y} {rot.z} {rot.w}");
+                foreach (Vector2 point in plane.boundary)
+                {
+                    file.WriteLine($"b {point.x} {point.y}");
+                }
             }
+            planesUpdated.Clear();
+            foreach (ARPlane plane in planesRemoved)
+            {
+                file.WriteLine($"pd {plane.trackableId}");
+            }
+            planesRemoved.Clear();
         }
-        planesUpdated.Clear();
-        foreach (ARPlane plane in planesRemoved)
-        {
-            file.WriteLine($"pd {plane.trackableId}");
-        }
-        planesRemoved.Clear();
     }
 }
