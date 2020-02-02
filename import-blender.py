@@ -47,12 +47,14 @@ with open(bpy.path.abspath("//recording.txt"), 'r') as file:
             cam.keyframe_insert('rotation_quaternion')
         if words[0] == 'd':
             id = int(words[1])
-            if not id in cloud_points:
-                v = (float(words[2]), float(words[3]), -float(words[4]))
-                cloud_points[id] = point_cloud_bmesh.verts.new(v)
-            else:
-                vert = cloud_points[id]
-                vert.co = (float(words[2]), float(words[3]), -float(words[4]))
+            confidence = float(words[5])
+            if confidence >= 0.5:
+                if not id in cloud_points:
+                    v = (float(words[2]), float(words[3]), -float(words[4]))
+                    cloud_points[id] = point_cloud_bmesh.verts.new(v)
+                else:
+                    vert = cloud_points[id]
+                    vert.co = (float(words[2]), float(words[3]), -float(words[4]))
         if words[0] == 'p':
             id = words[1]
             v = mathutils.Vector((float(words[2]), float(words[3]), -float(words[4])))
