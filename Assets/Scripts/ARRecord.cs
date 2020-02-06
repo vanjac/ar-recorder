@@ -147,7 +147,9 @@ public class ARRecord : MonoBehaviour
                 {
                     Vector3 pos = pointCloud.positions[i];
                     ulong id = pointCloud.identifiers[i];
-                    float confidence = pointCloud.confidenceValues[i];
+                    float confidence = 1.0f;
+                    if (pointCloud.confidenceValues.IsCreated)
+                        confidence = pointCloud.confidenceValues[i];
                     file.WriteLine($"d {id} {pos.x} {pos.y} {pos.z} {confidence}");
                 }
             }
