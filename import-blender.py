@@ -4,6 +4,12 @@ import mathutils
 import math
 import bmesh
 
+from bpy.props import (
+    BoolProperty,
+    StringProperty
+    )
+
+
 ROTATE_X_90 = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
 
 def unity_vector_to_blender(x, y, z):
@@ -15,6 +21,7 @@ def unity_quaternion_to_blender(w, x, y, z):
 def import_ar_recording(context, report,
         filepath,
         include_camera, include_cloud, include_planes,
+        include_camera_position, include_camera_rotation,
         *args, **kwargs):
     scene = context.scene
     fps = scene.render.fps
@@ -25,7 +32,8 @@ def import_ar_recording(context, report,
         if not cam:
             report({'ERROR'}, "No object selected")
             return {'FINISHED'}
-        cam.rotation_mode = 'QUATERNION'
+        if include_camera_rotation:
+            cam.rotation_mode = 'QUATERNION'
 
     if include_cloud:
         point_cloud_mesh = bpy.data.meshes.new("cloud")
@@ -57,11 +65,13 @@ def import_ar_recording(context, report,
                 scene.frame_current = frame
 
             if words[0] == 'c' and include_camera:
-                cam.location = unity_vector_to_blender(words[1], words[2], words[3])
-                q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
-                cam.rotation_quaternion = q
-                cam.keyframe_insert('location')
-                cam.keyframe_insert('rotation_quaternion')
+                if include_camera_position:
+                    cam.location = unity_vector_to_blender(words[1], words[2], words[3])
+                    cam.keyframe_insert('location')
+                if include_camera_rotation:
+                    q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
+                    cam.rotation_quaternion = q
+                    cam.keyframe_insert('rotation_quaternion')
 
             if words[0] == 'd' and include_cloud:
                 id = int(words[1])
@@ -105,11 +115,14 @@ class ImportARRecording(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     bl_options = {'REGISTER', 'PRESET', 'UNDO'}
     
     filename_ext = ".txt"
-    filter_glob: bpy.props.StringProperty(default="*.txt", options={'HIDDEN'})
+    filter_glob: StringProperty(default="*.txt", options={'HIDDEN'})
 
-    include_camera: bpy.props.BoolProperty(name="Camera", default=True)
-    include_cloud: bpy.props.BoolProperty(name="Cloud", default=False)
-    include_planes: bpy.props.BoolProperty(name="Planes", default=False)
+    include_camera: BoolProperty(name="Camera", default=True)
+    include_cloud: BoolProperty(name="Cloud", default=False)
+    include_planes: BoolProperty(name="Planes", default=False)
+    
+    include_camera_position: BoolProperty(name="Position", default=True)
+    include_camera_rotation: BoolProperty(name="Rotation", default=True)
     
     def execute(self, context):
         keywords = self.as_keywords()
@@ -146,6 +159,12 @@ class AR_PT_import_main(bpy.types.Panel):
         row.prop(operator, "include_camera", toggle=True)
         row.prop(operator, "include_cloud", toggle=True)
         row.prop(operator, "include_planes", toggle=True)
+        
+        row = layout.row(align=True)
+        row.alignment = 'EXPAND'
+        row.label(text="Camera")
+        row.prop(operator, "include_camera_position", toggle=True)
+        row.prop(operator, "include_camera_rotation", toggle=True)
 
 
 def register():
