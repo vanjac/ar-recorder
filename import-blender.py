@@ -3,6 +3,12 @@ import mathutils
 import math
 import bmesh
 
+def unity_vector_to_blender(x, y, z):
+    return (float(x), float(y), -float(z))
+
+def unity_quaternion_to_blender(w, x, y, z):
+    return mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
+
 scene = bpy.context.scene
 fps = scene.render.fps
 cam = scene.camera
@@ -30,35 +36,35 @@ with open(bpy.path.abspath("//recording.txt"), 'r') as file:
         words = line.split(' ')
         if len(words) == 0:
             continue
+
         if words[0] == 't':
             time = float(words[1])
             if start_time is None:
                 start_time = time
             time -= start_time
             frame = int(round(time * fps))
-            #print("Frame", frame)
             scene.frame_current = frame
+
         if words[0] == 'c':
-            v = mathutils.Vector((float(words[1]), float(words[2]), -float(words[3])))
-            q = mathutils.Quaternion((-float(words[7]), float(words[4]), float(words[5]), -float(words[6])))
-            cam.location = v
+            cam.location = unity_vector_to_blender(words[1], words[2], words[3])
+            q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
             cam.rotation_quaternion = q
             cam.keyframe_insert('location')
             cam.keyframe_insert('rotation_quaternion')
+
         if words[0] == 'd':
             id = int(words[1])
             confidence = float(words[5])
             if confidence >= 0.5:
                 if not id in cloud_points:
-                    v = (float(words[2]), float(words[3]), -float(words[4]))
+                    v = unity_vector_to_blender(words[2], words[3], words[4])
                     cloud_points[id] = point_cloud_bmesh.verts.new(v)
                 else:
                     vert = cloud_points[id]
-                    vert.co = (float(words[2]), float(words[3]), -float(words[4]))
+                    vert.co = unity_vector_to_blender(words[2], words[3], words[4])
+
         if words[0] == 'p':
             id = words[1]
-            v = mathutils.Vector((float(words[2]), float(words[3]), -float(words[4])))
-            q = mathutils.Quaternion((-float(words[8]), float(words[5]), float(words[6]), -float(words[7])))
             if not id in planes:
                 bpy.ops.mesh.primitive_plane_add()
                 plane = bpy.context.object
@@ -69,7 +75,8 @@ with open(bpy.path.abspath("//recording.txt"), 'r') as file:
                 prev_frame = scene.frame_current - 1
                 plane.keyframe_insert('location', frame=prev_frame)
                 plane.keyframe_insert('rotation_quaternion', frame=prev_frame)
-            plane.location = v
+            plane.location = unity_vector_to_blender(words[2], words[3], words[4])
+            q = unity_quaternion_to_blender(words[8], words[5], words[6], words[7])
             plane.rotation_quaternion = q @ plane_rotate
             plane.keyframe_insert('location')
             plane.keyframe_insert('rotation_quaternion')
