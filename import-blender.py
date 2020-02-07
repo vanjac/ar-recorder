@@ -3,11 +3,13 @@ import mathutils
 import math
 import bmesh
 
+plane_rotate = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
+
 def unity_vector_to_blender(x, y, z):
-    return (float(x), float(y), -float(z))
+    return (float(x), float(z), float(y))
 
 def unity_quaternion_to_blender(w, x, y, z):
-    return mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
+    return plane_rotate @ mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
 
 scene = bpy.context.scene
 fps = scene.render.fps
@@ -16,8 +18,6 @@ cam.rotation_mode = 'QUATERNION'
 
 cloud_points = { }
 planes = { }
-
-plane_rotate = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
 
 start_time = None
 point_cloud_mesh = bpy.data.meshes.new("cloud")
