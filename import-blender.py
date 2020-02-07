@@ -26,6 +26,7 @@ def import_ar_recording(context, report,
     scene = context.scene
     fps = scene.render.fps
     start_time = None
+    start_frame = scene.frame_current
     
     if include_camera:
         cam = context.active_object
@@ -62,7 +63,7 @@ def import_ar_recording(context, report,
                     start_time = time
                 time -= start_time
                 frame = int(round(time * fps))
-                scene.frame_current = frame
+                scene.frame_current = frame + start_frame
 
             if words[0] == 'c' and include_camera:
                 if include_camera_position:
