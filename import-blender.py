@@ -12,7 +12,7 @@ def unity_vector_to_blender(x, y, z):
 def unity_quaternion_to_blender(w, x, y, z):
     return ROTATE_X_90 @ mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
 
-def import_ar_recording(context,
+def import_ar_recording(context, report,
         filepath,
         include_camera, include_cloud, include_planes,
         *args, **kwargs):
@@ -21,7 +21,10 @@ def import_ar_recording(context,
     start_time = None
     
     if include_camera:
-        cam = scene.camera
+        cam = context.active_object
+        if not cam:
+            report({'ERROR'}, "No object selected")
+            return {'FINISHED'}
         cam.rotation_mode = 'QUATERNION'
 
     if include_cloud:
@@ -110,7 +113,7 @@ class ImportARRecording(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     
     def execute(self, context):
         keywords = self.as_keywords()
-        return import_ar_recording(context, **keywords)
+        return import_ar_recording(context, self.report, **keywords)
 
     def draw(self, context):
         pass
