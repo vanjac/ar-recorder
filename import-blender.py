@@ -1,3 +1,14 @@
+bl_info = {
+    "name": "Import AR Recording",
+    "description": "Import AR tracking data files.",
+    "author": "Jacob van't Hoog",
+    "version": (1, 0),
+    "blender": (2, 80, 0),
+    "location": "File > Import",
+    "category": "Import-Export",
+    }
+
+
 import bpy
 import bpy_extras
 import mathutils
@@ -196,14 +207,18 @@ class AR_PT_import_main(bpy.types.Panel):
         row.prop(operator, "include_camera_position", toggle=True)
         row.prop(operator, "include_camera_rotation", toggle=True)
 
+def menu_func_import(self, context):
+    self.layout.operator(ImportARRecording.bl_idname, text="AR Recording")
 
 def register():
     bpy.utils.register_class(ImportARRecording)
     bpy.utils.register_class(AR_PT_import_main)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
 def unregister():
     bpy.utils.unregister_class(ImportARRecording)
     bpy.utils.unregister_class(AR_PT_import_main)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
 
 if __name__ == "__main__":
