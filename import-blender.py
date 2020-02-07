@@ -38,7 +38,6 @@ def import_ar_recording(context, report,
         point_cloud_mesh = bpy.data.meshes.new("cloud")
         point_cloud_obj = bpy.data.objects.new("PointCloud", point_cloud_mesh)
         scene.collection.objects.link(point_cloud_obj)
-        point_cloud_mesh = point_cloud_obj.data
         point_cloud_bmesh = bmesh.new()
         cloud_points = { }
 
@@ -103,14 +102,22 @@ def import_ar_recording(context, report,
                         vert.co = unity_vector_to_blender(words[2], words[3], words[4])
 
             if words[0] == 'p' and include_planes:
+                complete_plane_bmesh()
+
                 id = words[1]
                 if not id in planes:
-                    bpy.ops.mesh.primitive_plane_add()
-                    plane = context.object
+                    plane_mesh = bpy.data.meshes.new("plane")
+                    plane = bpy.data.objects.new("Plane", plane_mesh)
                     plane.rotation_mode = 'QUATERNION'
+                    scene.collection.objects.link(plane)
                     planes[id] = plane
+                    plane_bm = bmesh.new()
                 else:
                     plane = planes[id]
+                    plane_mesh = plane.data
+                    plane_bm = bmesh.new()
+                    plane_bm.from_mesh(plane_mesh)
+                    bmesh.ops.delete(plane_bm, geom=plane_bm.verts, context='VERTS')
                     #prev_frame = scene.frame_current - 1
                     #plane.keyframe_insert('location', frame=prev_frame)
                     #plane.keyframe_insert('rotation_quaternion', frame=prev_frame)
@@ -119,12 +126,6 @@ def import_ar_recording(context, report,
                 plane.rotation_quaternion = q @ ROTATE_X_90
                 #plane.keyframe_insert('location')
                 #plane.keyframe_insert('rotation_quaternion')
-
-                complete_plane_bmesh()
-                plane_mesh = plane.data
-                plane_bm = bmesh.new()
-                plane_bm.from_mesh(plane_mesh)
-                bmesh.ops.delete(plane_bm, geom=plane_bm.verts, context='VERTS')
             
             if words[0] == 'b' and include_planes:
                 plane_bm.verts.new((float(words[1]), -float(words[2]), 0.0))
