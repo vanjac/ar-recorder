@@ -12,12 +12,6 @@ from bpy.props import (
 
 ROTATE_X_90 = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
 
-def unity_vector_to_blender(x, y, z):
-    return (float(x), float(z), float(y))
-
-def unity_quaternion_to_blender(w, x, y, z):
-    return ROTATE_X_90 @ mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
-
 def import_ar_recording(context, report,
         filepath,
         include_camera, include_cloud, include_planes,
@@ -27,6 +21,7 @@ def import_ar_recording(context, report,
     fps = scene.render.fps
     start_time = None
     start_frame = scene.frame_current
+    camera_offset_applied = False
     
     if include_camera:
         cam = context.active_object
@@ -35,6 +30,9 @@ def import_ar_recording(context, report,
             return {'FINISHED'}
         if include_camera_rotation:
             cam.rotation_mode = 'QUATERNION'
+        position_offset = cam.location.copy()
+    else:
+        position_offset = scene.cursor.location.copy()
 
     if include_cloud:
         point_cloud_mesh = bpy.data.meshes.new("cloud")
@@ -46,6 +44,12 @@ def import_ar_recording(context, report,
 
     if include_planes:
         planes = { }
+
+    def unity_vector_to_blender(x, y, z):
+        return mathutils.Vector((float(x), float(z), float(y))) + position_offset
+
+    def unity_quaternion_to_blender(w, x, y, z):
+        return ROTATE_X_90 @ mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
 
     with open(filepath, 'r') as file:
         while True:
@@ -65,14 +69,19 @@ def import_ar_recording(context, report,
                 frame = int(round(time * fps))
                 scene.frame_current = frame + start_frame
 
-            if words[0] == 'c' and include_camera:
-                if include_camera_position:
-                    cam.location = unity_vector_to_blender(words[1], words[2], words[3])
-                    cam.keyframe_insert('location')
-                if include_camera_rotation:
-                    q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
-                    cam.rotation_quaternion = q
-                    cam.keyframe_insert('rotation_quaternion')
+            if words[0] == 'c':
+                if not camera_offset_applied:
+                    # use initial position of camera as origin
+                    position_offset -= unity_vector_to_blender(words[1], words[2], words[3]) - position_offset
+                    camera_offset_applied = True
+                if include_camera:
+                    if include_camera_position:
+                        cam.location = unity_vector_to_blender(words[1], words[2], words[3])
+                        cam.keyframe_insert('location')
+                    if include_camera_rotation:
+                        q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
+                        cam.rotation_quaternion = q
+                        cam.keyframe_insert('rotation_quaternion')
 
             if words[0] == 'd' and include_cloud:
                 id = int(words[1])
