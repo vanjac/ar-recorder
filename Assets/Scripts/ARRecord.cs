@@ -11,8 +11,7 @@ public class ARRecord : MonoBehaviour
     public static ARRecord instance;
 
     public GameObject uiCanvas;
-    public Text timeText, filenameText;
-    public Text startStopText;
+    public Text timeText, filenameText, buttonText;
 
     public GameObject arOrigin;
     public Transform arCam;
@@ -54,7 +53,7 @@ public class ARRecord : MonoBehaviour
 
     private void StartRecording()
     {
-        startStopText.text = "STOP";
+        buttonText.text = "STOP";
 
         string fileName = DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".txt";
         filenameText.text = fileName;
@@ -79,7 +78,7 @@ public class ARRecord : MonoBehaviour
 
     private void StopRecording()
     {
-        startStopText.text = "START";
+        buttonText.text = "Record";
 
         if (file == null)
             return;
