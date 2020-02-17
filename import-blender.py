@@ -266,6 +266,9 @@ def stream_update():
         target = stream_props.target_object
         if target:
             target.rotation_mode = 'QUATERNION'
+        else:
+            stream_thread.prev_position = None
+        rotate_q = mathutils.Quaternion((0.0, 0.0, 1.0), stream_props.rotate_z)
         while not stream_thread.message_queue.empty():
             message = stream_thread.message_queue.get()
             message = message.strip()
@@ -274,11 +277,14 @@ def stream_update():
                 continue
             if words[0] == 'c' and target:
                 v = mathutils.Vector((float(words[1]), float(words[3]), float(words[2])))
-                v *= stream_props.scale
                 if stream_thread.prev_position:
-                    target.location += v - stream_thread.prev_position
+                    delta = v - stream_thread.prev_position
+                    delta = rotate_q @ delta
+                    delta *= stream_props.scale
+                    target.location += delta
                 stream_thread.prev_position = v
                 q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
+                q = rotate_q @ q
                 target.rotation_quaternion = q
     except Exception as e:
         print(e)
@@ -299,6 +305,7 @@ def stop_stream_thread():
 class ARStreamingProperties(bpy.types.PropertyGroup):
     ip_address: StringProperty(name="IP Address")
     target_object: PointerProperty(name="Target", type=bpy.types.Object)
+    rotate_z: FloatProperty(name="Rotate Z", default=0.0, subtype='ANGLE', unit='ROTATION')
     scale: FloatProperty(name="Scale", default=1.0)
 
 
@@ -340,6 +347,7 @@ class AR_PT_stream(bpy.types.Panel):
         else:
             self.layout.operator("view3d.ar_stream_connect", text="Connect")
         self.layout.prop(stream_props, "target_object")
+        self.layout.prop(stream_props, "rotate_z")
         self.layout.prop(stream_props, "scale")
 
 
