@@ -26,6 +26,9 @@ public static class IOSPostBuild
             rootDict.SetBoolean("UIFileSharingEnabled", true);
             rootDict.SetBoolean("LSSupportsOpeningDocumentsInPlace", true);
 
+            var capabilities = rootDict["UIRequiredDeviceCapabilities"].AsArray();
+            capabilities.AddString("wifi");
+
             plist.WriteToFile(plistPath);
         }
     }
