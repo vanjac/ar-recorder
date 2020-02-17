@@ -269,6 +269,7 @@ def stream_update():
         else:
             stream_thread.prev_position = None
         rotate_q = mathutils.Quaternion((0.0, 0.0, 1.0), stream_props.rotate_z)
+        insert_keyframe = bpy.context.scene.tool_settings.use_keyframe_insert_auto
         while not stream_thread.message_queue.empty():
             message = stream_thread.message_queue.get()
             message = message.strip()
@@ -282,10 +283,14 @@ def stream_update():
                     delta = rotate_q @ delta
                     delta *= stream_props.scale
                     target.location += delta
+                    if insert_keyframe:
+                        target.keyframe_insert('location')
                 stream_thread.prev_position = v
                 q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
                 q = rotate_q @ q
                 target.rotation_quaternion = q
+                if insert_keyframe:
+                    target.keyframe_insert('rotation_quaternion')
     except Exception as e:
         print(e)
     finally:
