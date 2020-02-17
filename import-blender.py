@@ -2,7 +2,7 @@ bl_info = {
     "name": "Import AR Recording",
     "description": "Import AR tracking data files.",
     "author": "Jacob van't Hoog",
-    "version": (1, 0),
+    "version": (1, 1),
     "blender": (2, 80, 0),
     "location": "File > Import",
     "category": "Import-Export",
@@ -14,14 +14,21 @@ import bpy_extras
 import mathutils
 import math
 import bmesh
+import threading
+import socket
 
 from bpy.props import (
     BoolProperty,
-    StringProperty
+    StringProperty,
+    PointerProperty
     )
 
 
 ROTATE_X_90 = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
+
+
+### IMPORT ###
+
 
 def import_ar_recording(context, report,
         filepath,
@@ -207,6 +214,92 @@ class AR_PT_import_main(bpy.types.Panel):
         row.prop(operator, "include_camera_position", toggle=True)
         row.prop(operator, "include_camera_rotation", toggle=True)
 
+
+### STREAMING ###
+
+stream_thread = None
+
+class StreamThread(threading.Thread):
+    
+    def __init__(self, ip_address):
+        super().__init__(daemon=True)
+        self._stop_event = threading.Event()
+        self.ip_address = ip_address
+    
+    def stop(self):
+        print("Stopping...")
+        self._stop_event.set()
+    
+    def stopped(self):
+        return self._stop_event.is_set()
+
+    def run(self):
+        addr = (self.ip_address, 7299)
+        hello = "hello".encode('utf-8')
+
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(1)
+            client.sendto(hello, addr)
+            while not self.stopped():
+                try:
+                    message = client.recv(4096)
+                    print(message)
+                except socket.timeout:
+                    print("timeout, trying again")
+                    client.sendto(hello, addr)
+
+
+def stop_stream_thread():
+    global stream_thread
+    if stream_thread and stream_thread.is_alive():
+        stream_thread.stop()
+        stream_thread.join()
+        stream_thread = None
+
+class ARStreamingProperties(bpy.types.PropertyGroup):
+    target_object: PointerProperty(name="Target", type=bpy.types.Object)
+    ip_address: StringProperty(name="IP Address")
+
+
+class ARStreamConnect(bpy.types.Operator):
+    bl_idname = "view3d.ar_stream_connect"
+    bl_label = "AR Stream Connect"
+    bl_options = {'REGISTER'}
+ 
+    def execute(self, context):
+        global stream_thread
+        stop_stream_thread()
+        stream_thread = StreamThread(context.window_manager.ar_streaming.ip_address)
+        stream_thread.start()
+        return {'FINISHED'}
+
+class ARStreamDisconnect(bpy.types.Operator):
+    bl_idname = "view3d.ar_stream_disconnect"
+    bl_label = "AR Stream Disconnect"
+    bl_options = {'REGISTER'}
+ 
+    def execute(self, context):
+        global stream_thread
+        stop_stream_thread()
+        return {'FINISHED'}
+
+
+class AR_PT_stream(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_label = "AR Streaming"
+ 
+    def draw(self, context):
+        global stream_thread
+        streaming_props = context.window_manager.ar_streaming
+        self.layout.prop(streaming_props, "target_object")
+        self.layout.prop(streaming_props, "ip_address")
+        if stream_thread and stream_thread.is_alive():
+            self.layout.operator("view3d.ar_stream_disconnect", text="Disconnect")
+        else:
+            self.layout.operator("view3d.ar_stream_connect", text="Connect")
+
+
 def menu_func_import(self, context):
     self.layout.operator(ImportARRecording.bl_idname, text="AR Recording")
 
@@ -215,10 +308,22 @@ def register():
     bpy.utils.register_class(AR_PT_import_main)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
+    bpy.utils.register_class(ARStreamingProperties)
+    bpy.types.WindowManager.ar_streaming = PointerProperty(type=ARStreamingProperties)
+    bpy.utils.register_class(ARStreamConnect)
+    bpy.utils.register_class(ARStreamDisconnect)
+    bpy.utils.register_class(AR_PT_stream)
+
 def unregister():
     bpy.utils.unregister_class(ImportARRecording)
     bpy.utils.unregister_class(AR_PT_import_main)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+
+    bpy.utils.unregister_class(ARStreamingProperties)
+    del bpy.types.WindowManager.ar_streaming
+    bpy.utils.unregister_class(ARStreamConnect)
+    bpy.utils.unregister_class(ARStreamDisconnect)
+    bpy.utils.unregister_class(AR_PT_stream)
 
 
 if __name__ == "__main__":
