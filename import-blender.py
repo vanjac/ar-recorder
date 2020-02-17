@@ -221,6 +221,8 @@ class AR_PT_import_main(bpy.types.Panel):
 stream_thread = None
 
 class StreamThread(threading.Thread):
+
+    prev_position = None
     
     def __init__(self, ip_address):
         super().__init__(daemon=True)
@@ -229,7 +231,7 @@ class StreamThread(threading.Thread):
         self.ip_address = ip_address
     
     def stop(self):
-        print("Stopping...")
+        #print("Stopping...")
         self._stop_event.set()
     
     def stopped(self):
@@ -247,8 +249,9 @@ class StreamThread(threading.Thread):
                     message = client.recv(4096)
                     self.message_queue.put(message.decode("utf-8"))
                 except socket.timeout:
-                    print("timeout, trying again")
+                    #print("timeout, trying again")
                     client.sendto(hello, addr)
+                    #self.prev_position = None
 
 
 def stream_update():
@@ -272,7 +275,9 @@ def stream_update():
             if words[0] == 'c' and target:
                 v = mathutils.Vector((float(words[1]), float(words[3]), float(words[2])))
                 v *= stream_props.scale
-                target.location = v
+                if stream_thread.prev_position:
+                    target.location += v - stream_thread.prev_position
+                stream_thread.prev_position = v
                 q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
                 target.rotation_quaternion = q
     except Exception as e:
