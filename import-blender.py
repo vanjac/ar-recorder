@@ -21,6 +21,7 @@ import queue
 from bpy.props import (
     BoolProperty,
     StringProperty,
+    FloatProperty,
     PointerProperty
     )
 
@@ -269,7 +270,9 @@ def stream_update():
             if len(words) == 0:
                 continue
             if words[0] == 'c' and target:
-                target.location = (float(words[1]), float(words[3]), float(words[2]))
+                v = mathutils.Vector((float(words[1]), float(words[3]), float(words[2])))
+                v *= stream_props.scale
+                target.location = v
                 q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
                 target.rotation_quaternion = q
     except Exception as e:
@@ -289,8 +292,9 @@ def stop_stream_thread():
 
 
 class ARStreamingProperties(bpy.types.PropertyGroup):
-    target_object: PointerProperty(name="Target", type=bpy.types.Object)
     ip_address: StringProperty(name="IP Address")
+    target_object: PointerProperty(name="Target", type=bpy.types.Object)
+    scale: FloatProperty(name="Scale", default=1.0)
 
 
 class ARStreamConnect(bpy.types.Operator):
@@ -325,12 +329,13 @@ class AR_PT_stream(bpy.types.Panel):
     def draw(self, context):
         global stream_thread
         stream_props = context.window_manager.ar_streaming
-        self.layout.prop(stream_props, "target_object")
         self.layout.prop(stream_props, "ip_address")
         if stream_thread and stream_thread.is_alive():
             self.layout.operator("view3d.ar_stream_disconnect", text="Disconnect")
         else:
             self.layout.operator("view3d.ar_stream_connect", text="Connect")
+        self.layout.prop(stream_props, "target_object")
+        self.layout.prop(stream_props, "scale")
 
 
 def menu_func_import(self, context):
@@ -348,6 +353,7 @@ def register():
     bpy.utils.register_class(AR_PT_stream)
 
 def unregister():
+    stop_stream_thread()
     bpy.utils.unregister_class(ImportARRecording)
     bpy.utils.unregister_class(AR_PT_import_main)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
