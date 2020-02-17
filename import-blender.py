@@ -27,6 +27,8 @@ from bpy.props import (
 
 ROTATE_X_90 = mathutils.Quaternion((1.0, 0.0, 0.0), math.radians(90.0))
 
+def unity_quaternion_to_blender(w, x, y, z):
+    return ROTATE_X_90 @ mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
 
 ### IMPORT ###
 
@@ -67,9 +69,6 @@ def import_ar_recording(context, report,
 
     def unity_vector_to_blender(x, y, z):
         return mathutils.Vector((float(x), float(z), float(y))) + position_offset
-
-    def unity_quaternion_to_blender(w, x, y, z):
-        return ROTATE_X_90 @ mathutils.Quaternion((-float(w), float(x), float(y), -float(z)))
 
     def complete_plane_bmesh():
         if plane_bm:
@@ -245,7 +244,7 @@ class StreamThread(threading.Thread):
             while not self.stopped():
                 try:
                     message = client.recv(4096)
-                    self.message_queue.put(message)
+                    self.message_queue.put(message.decode("utf-8"))
                 except socket.timeout:
                     print("timeout, trying again")
                     client.sendto(hello, addr)
@@ -259,8 +258,20 @@ def stream_update():
         return
     
     try:
+        stream_props = bpy.context.window_manager.ar_streaming
+        target = stream_props.target_object
+        if target:
+            target.rotation_mode = 'QUATERNION'
         while not stream_thread.message_queue.empty():
-            print("q", stream_thread.message_queue.get())
+            message = stream_thread.message_queue.get()
+            message = message.strip()
+            words = message.split(' ')
+            if len(words) == 0:
+                continue
+            if words[0] == 'c' and target:
+                target.location = (float(words[1]), float(words[3]), float(words[2]))
+                q = unity_quaternion_to_blender(words[7], words[4], words[5], words[6])
+                target.rotation_quaternion = q
     except Exception as e:
         print(e)
     finally:
@@ -313,9 +324,9 @@ class AR_PT_stream(bpy.types.Panel):
  
     def draw(self, context):
         global stream_thread
-        streaming_props = context.window_manager.ar_streaming
-        self.layout.prop(streaming_props, "target_object")
-        self.layout.prop(streaming_props, "ip_address")
+        stream_props = context.window_manager.ar_streaming
+        self.layout.prop(stream_props, "target_object")
+        self.layout.prop(stream_props, "ip_address")
         if stream_thread and stream_thread.is_alive():
             self.layout.operator("view3d.ar_stream_disconnect", text="Disconnect")
         else:
