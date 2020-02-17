@@ -16,6 +16,7 @@ import math
 import bmesh
 import threading
 import socket
+import queue
 
 from bpy.props import (
     BoolProperty,
@@ -224,6 +225,7 @@ class StreamThread(threading.Thread):
     def __init__(self, ip_address):
         super().__init__(daemon=True)
         self._stop_event = threading.Event()
+        self.message_queue = queue.SimpleQueue()
         self.ip_address = ip_address
     
     def stop(self):
@@ -243,18 +245,37 @@ class StreamThread(threading.Thread):
             while not self.stopped():
                 try:
                     message = client.recv(4096)
-                    print(message)
+                    self.message_queue.put(message)
                 except socket.timeout:
                     print("timeout, trying again")
                     client.sendto(hello, addr)
 
 
+def stream_update():
+    global stream_thread
+    
+    if not stream_thread or not stream_thread.is_alive():
+        print("Stream thread died!")
+        return
+    
+    try:
+        while not stream_thread.message_queue.empty():
+            print("q", stream_thread.message_queue.get())
+    except Exception as e:
+        print(e)
+    finally:
+        return 1.0 / bpy.context.scene.render.fps
+
+
 def stop_stream_thread():
     global stream_thread
+    if bpy.app.timers.is_registered(stream_update):
+        bpy.app.timers.unregister(stream_update)
     if stream_thread and stream_thread.is_alive():
         stream_thread.stop()
         stream_thread.join()
         stream_thread = None
+
 
 class ARStreamingProperties(bpy.types.PropertyGroup):
     target_object: PointerProperty(name="Target", type=bpy.types.Object)
@@ -271,6 +292,7 @@ class ARStreamConnect(bpy.types.Operator):
         stop_stream_thread()
         stream_thread = StreamThread(context.window_manager.ar_streaming.ip_address)
         stream_thread.start()
+        bpy.app.timers.register(stream_update)
         return {'FINISHED'}
 
 class ARStreamDisconnect(bpy.types.Operator):
