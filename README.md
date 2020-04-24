@@ -8,3 +8,7 @@ There are two ways to record animation data:
 - **Stream**: Send tracking data over WiFi to allow controlling objects in real time. With Auto Keying enabled you can record animation keyframes by moving your phone.
 
 The `import-blender.py` addon script adds both of these control methods to Blender.
+
+[Download for Android.](https://github.com/vanjac/ar-recorder/releases) Built with Unity 2019.2.19.
+
+It also works on iOS, but you'll have to build it yourself.
