@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Import AR Recording",
     "description": "Import AR tracking data files.",
-    "author": "Jacob van't Hoog",
+    "author": "chroma zone",
     "version": (1, 1),
     "blender": (2, 80, 0),
     "location": "File > Import",
